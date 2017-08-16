@@ -16,7 +16,8 @@ class grid:
         self.grid = np.zeros(size)
         self.ogrid = None
         self.dir = ['E', 'W', 'N', 'S'] 
-    
+        self.terminate = []
+        self.unavailable = []
     def init(self):
 
         self.ogrid = np.copy(self.grid)
@@ -24,14 +25,19 @@ class grid:
     def set(self, coord, value):
         
         self.grid[coord[0], coord[1]] = value
-    
-    def set_goal(self, coord):
+        
+    def set_terminate(self, coord, value):
 
-        self.grid[coord[0], coord[1]] = 100
+        self.grid[coord[0], coord[1]] = value
     
-    def set_hole(self, coord):
+        self.terminate.append(coord)
+
+    
+    def set_unavailable(self, coord):
 
         self.grid[coord[0], coord[1]] = np.nan
+        
+        self.unavailable.append(coord)
 
     def show(self, p = 'c'):
 
