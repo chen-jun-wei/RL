@@ -15,7 +15,7 @@ g.show()
 
 a = agent(g, [0,1], 10, 1)
 
-a.random_walk(epoch = 100, show = True)
+a.random_walk(epoch = 20, show = True)
 
 
 

@@ -148,6 +148,7 @@ class agent:
                 
                 print ('Epoch : {}, Step : {}, State : {}'.format(i+1, self.step, self.state))
                 
+                print ('Choosed : ', self.env.dir[self.policy[self.state[0], self.state[1]]])
                 r = self.act(self.policy[self.state[0], self.state[1]])
 
                 self.step += 1
@@ -239,13 +240,13 @@ class agent:
                 
             self.isBreak = True
 
-        elif self.isReachable(next_state) :
-            
-            maximum = 0
+        elif self.isReachable(next_state) :      
             
             for a in xrange(len(self.env.dir)):
                 #print ('possible next state value : ', self.value[pns[0],pns[1]])
-        
+                
+                maximum = 0     
+
                 for pns, pnd in zip(self.available()[0], self.available()[1]):
                     
                     if pns in self.env.unavailable:
@@ -254,13 +255,16 @@ class agent:
                     
                     #self.q_value[self.state[0], self.state[1], a] = self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * \
                      #       (self.reward_function() + self.discount * self.value[pns[0], pns[1]])
-                    maximum = max(maximum, self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * (self.reward_function() + self.discount * self.value[pns[0], pns[1]])
+                    maximum = max(maximum, self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * \
+                            (self.reward_function() + self.discount * self.value[pns[0], pns[1]]))
+               
                 # update value
                 self.q_value[self.state[0], self.state[1], a] = maximum
 
                 self.value[self.state[0], self.state[1]] = self.value_function()
 
                 if self.value[pns[0],pns[1]] > 50:
+                    
                     self.show() 
                     #raise
     # transition probability range, random probability
@@ -284,6 +288,7 @@ class agent:
             
             if tprob_range[i] < rprob and rprob < tprob_range[i+1]:
                 
+                print ('Reach ', self.env.dir[i])
                 return i # return which action to run
 
     def reward_function(self):
