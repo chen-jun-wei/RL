@@ -1,10 +1,5 @@
 import numpy as np
-import sys
-
-
-def print2(to):
-
-    sys.stdout.write(str(to))
+from utils import print2
 
 
 class grid:
@@ -31,6 +26,7 @@ class grid:
         self.grid[coord[0], coord[1]] = value
     
         self.terminate.append(coord)
+
 
     
     def set_unavailable(self, coord):

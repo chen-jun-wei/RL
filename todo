@@ -2,3 +2,5 @@ check if it is necessary to set the intial probability to 0 when there is a unav
 
 
 the prioritize of act or available action
+
+randomize the transition probability, default is 0.25 for each direction
