@@ -5,7 +5,7 @@ import copy
 
 class agent:
 
-    def __init__(self, env, start, epoch, discount):
+    def __init__(self, env, start, epoch, discount, tprob):
 
         self.state = start
         self.discount = discount         
@@ -21,8 +21,11 @@ class agent:
         #
         # in this example, choosed action is same as next state
         
-        self.tprob = np.ones([env.size[0], env.size[1], len(env.dir), len(env.dir)]) / len(env.dir)
+       # self.tprob = np.ones([env.size[0], env.size[1], len(env.dir), len(env.dir)]) / len(env.dir)
+
+        assert len(tprob) == len(env.dir)
         
+        self.tprob = np.tile(tprob, env.size[0] * env.size[1] * len(env.dir)).reshape([env.size[0], env.size[1], len(env.dir), len(env.dir)])
         
         # randomize the policy
 
@@ -31,6 +34,7 @@ class agent:
         self.q_value = np.zeros([env.size[0], env.size[1], len(env.dir)])
         
         self.value = np.zeros([env.size[0], env.size[1]])
+
         if not int(np.prod(np.array(env.size) > np.array(start))):        
         
             print ('[!] Start Position is not in Environment')
@@ -44,6 +48,7 @@ class agent:
 
             self.q_value[un[0],un[1]] = self.env.grid[un[0], un[1]]
             self.value[un[0], un[1]] = self.env.grid[un[0], un[1]]
+        
         for tm in self.env.terminate:
 
             self.q_value[tm[0], tm[1]] = self.env.grid[tm[0], tm[1]]
@@ -147,8 +152,11 @@ class agent:
                 print ('-------------------------------------------------------')
                 
                 print ('Epoch : {}, Step : {}, State : {}'.format(i+1, self.step, self.state))
-                
+                self.show()
+
+
                 print ('Choosed : ', self.env.dir[self.policy[self.state[0], self.state[1]]])
+        
                 r = self.act(self.policy[self.state[0], self.state[1]])
 
                 self.step += 1
@@ -158,6 +166,8 @@ class agent:
                     self.show()
 
             self.isBreak = False
+
+        self.update_policy()
 
     def random_start(self):
 
@@ -178,11 +188,15 @@ class agent:
                 continue
 
             break
-
+        print ('Start : ', coord)
         return coord # set start position
 
     def isReachable(self, next_state):
-
+        
+        try:
+            self.env.grid[next_state[0], next_state[1]]
+        except:
+            return False
         return False if np.isnan(self.env.grid[next_state[0], next_state[1]]) else True
                 
     def act(self, action):
@@ -196,7 +210,22 @@ class agent:
         action : int -> action
         """
         
-        # random select action
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# random select action
         # action = self.available() 
 
         # h x w x a x s'
@@ -240,33 +269,56 @@ class agent:
                 
             self.isBreak = True
 
-        elif self.isReachable(next_state) :      
-            
-            for a in xrange(len(self.env.dir)):
-                #print ('possible next state value : ', self.value[pns[0],pns[1]])
-                
-                maximum = 0     
+        #elif self.isReachable(next_state) :      
+        else:
 
+            maximum = -1e3
+
+            for a in xrange(len(self.env.dir)):
+            #for avas, avadir in zip(self.available()[0], self.available()[1]):  
+
+                #maximum = 0     
+                
+                #print (self.env.dir[a])
+        #        if not self.isReachable(self.move(self.state, self.env.dir[a])):
+
+         #          continue
+        
+                """
+
+                pns : possible next state
+            
+                pnd : possible next direction
+
+                """
+                
+                sum_over_next_state = 0
+                print('PNS : {}'.format(self.available()[0]))
                 for pns, pnd in zip(self.available()[0], self.available()[1]):
                     
+                    #if not self.isReachable(self.move(self.state, self.env.dir[a])):
+
+                     #   continue
                     if pns in self.env.unavailable:
 
                         continue
                     
-                    #self.q_value[self.state[0], self.state[1], a] = self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * \
-                     #       (self.reward_function() + self.discount * self.value[pns[0], pns[1]])
-                    maximum = max(maximum, self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * \
-                            (self.reward_function() + self.discount * self.value[pns[0], pns[1]]))
-               
+                    sum_over_next_state += self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * \
+                            (self.reward_function() + self.discount * self.value[pns[0], pns[1]])
                 # update value
-                self.q_value[self.state[0], self.state[1], a] = maximum
+                    print ('T x (reward + r * vk[s] : {} x ({} + {} * {})) = {}'.format(self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)], self.reward_function(), self.discount, self.value[pns[0], pns[1]], self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * (self.reward_function() + self.discount * self.value[pns[0], pns[1]])))
+                
+                
+                print ('Updating', self.q_value[self.state[0], self.state[1]])
 
-                self.value[self.state[0], self.state[1]] = self.value_function()
+                self.q_value[self.state[0], self.state[1], a] = sum_over_next_state#maximum
+            
+            self.value[self.state[0], self.state[1]] = self.value_function()
 
-                if self.value[pns[0],pns[1]] > 50:
-                    
-                    self.show() 
-                    #raise
+            print ('Update : ', self.q_value[self.state[0], self.state[1]])
+            
+            self.show()
+
     # transition probability range, random probability
 
     def transition(self, tprob):
@@ -288,7 +340,6 @@ class agent:
             
             if tprob_range[i] < rprob and rprob < tprob_range[i+1]:
                 
-                print ('Reach ', self.env.dir[i])
                 return i # return which action to run
 
     def reward_function(self):
@@ -298,7 +349,7 @@ class agent:
 
     def value_function(self, state = None, index = False):
         
-        maximum = 0
+        #maximum = 0
         
         if state == None:
 
@@ -324,9 +375,8 @@ class agent:
 
             for w in xrange(self.env.size[1]):
 
-                #print2(self.value_function([h,w]))
-                
                 print('%3.3f' % (self.value[h,w] ), end = '')
+                
                 print2(' | ')
             
             print (' ')
@@ -348,5 +398,57 @@ class agent:
                     print2('   ')
 
                 print2(' | ')
+            
+            print (' ')
+
+    def update_policy(self):
+
+        for j in xrange(self.env.size[0]):
+
+            for i in xrange(self.env.size[1]):
+
+                print ('update : ', self.q_value[j,i])
+
+                _, self.policy[j, i] = self.value_function([j, i], index = True)
+                
+    
+    def show_policy(self):
+
+        for h in reversed(xrange(self.env.size[0])):
+
+            for w in xrange(self.env.size[1]):
+                
+                #print (self.policy[h,w], end = '')
+                p = self.env.dir[self.policy[h,w]]
+                
+                if [h,w] in self.env.unavailable:
+
+                    print (' {} '.format(self.value[h,w]), end = '')
+                    print ('|', end = '')
+                    continue
+                elif [h,w] in self.env.terminate:
+
+                    print (' {} '.format(self.value[h,w]), end = '')
+                    print ('|', end = '')
+                    continue
+               # print ('{}'.format(p))
+
+                if p == 'E':
+
+                    print ('  >  ', end = '')
+
+                elif p == 'W':
+
+                    print ('  <  ', end = '')
+
+                elif p == 'S':
+
+                    print ('  v  ', end = '')
+
+                elif p == 'N':
+
+                    print ('  ^  ', end = '')
+                
+                print ('|', end = '')
             
             print (' ')

@@ -49,7 +49,3 @@ class grid:
             print ' ' 
             
         #self.grid.set
-
-
-
-

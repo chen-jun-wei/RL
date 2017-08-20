@@ -13,11 +13,11 @@ g.init()
 g.show()
 
 
-a = agent(g, [0,1], 10, 1)
+a = agent(g, [0,1], 10, 1, tprob = [0.25, 0.25, 0.5, 0.])
 
-a.random_walk(epoch = 20, show = True)
+a.random_walk(epoch = 100, show = True)
 
-
+a.show_policy()
 
 
 
