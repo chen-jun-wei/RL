@@ -13,20 +13,27 @@ class agent:
         self.epoch = epoch
         self.step = 0
         self.isBreak = False
-        # transition probability
-        #
-        # h x w         x a            x s'
-        # 
-        # [state] [choosed action] [reached state]
-        #
-        # in this example, choosed action is same as next state
+        self.start_point = start
+        """
+        Transition Probability
         
+        h x w x a x s'  => [state] [choosed action] [reached state]
+    
+        in this example, number of choosed action is same as number of next state
+        
+        """
+
        # self.tprob = np.ones([env.size[0], env.size[1], len(env.dir), len(env.dir)]) / len(env.dir)
 
         assert len(tprob) == len(env.dir)
+       
+       # fixed transition probability , E -> 0.7, W -> 0.1, S -> 0.1, N -> 0.1
+       # self.tprob = np.tile(tprob, env.size[0] * env.size[1] * len(env.dir)).reshape([env.size[0], env.size[1], len(env.dir), len(env.dir)])
         
-        self.tprob = np.tile(tprob, env.size[0] * env.size[1] * len(env.dir)).reshape([env.size[0], env.size[1], len(env.dir), len(env.dir)])
-        
+        # 0.7 for selected action, 0.1 for other 3 action
+
+        self.tprob = self.get_tprob()
+
         # randomize the policy
 
         self.policy = np.random.randint(0, len(self.env.dir), (env.size[0], env.size[1]))
@@ -53,6 +60,54 @@ class agent:
 
             self.q_value[tm[0], tm[1]] = self.env.grid[tm[0], tm[1]]
             self.value[tm[0], tm[1]] = self.env.grid[tm[0], tm[1]]
+    
+    def value_function(self, state, index = False):
+        
+        """
+
+        Ignore the unset value
+            
+
+        """
+        
+        maximum = None
+
+        maximum_index = None
+        
+        # Check if next state is available
+
+        for idx in xrange(len(self.env.dir)):
+
+            nexts = self.move(state, self.env.dir[idx])
+            print (nexts)    
+            
+            
+            if nexts in self.env.unavailable:
+
+                continue
+
+            if (nexts[0] >= 0 and nexts < self.env.size[0]) and \
+                    (nexts[1] >= 0 and nexts[1] < self.env.size[1]):
+                
+                if maximum == None:
+                    maximum = self.q_value[state[0], state[1], self.env.dir[idx]]
+                    maximum_index = idx
+                else:
+                    maximum_index = maximum_index if self.q_value[state[0], state[1], self.env.dir[idx]] > maximum else idx 
+                    
+                    maximum = max(maximum, self.q_value[state[0], state[1], self.env.dir[idx]])
+                 
+                if np.isnan(maximum):
+
+                    raise
+
+        if index:
+        
+            return maximum,  np.argmax(self.q_value[state[0], state[1]])
+        
+        else:
+            
+            return maximum
 
     def available(self):
         
@@ -121,6 +176,17 @@ class agent:
 
         return self.env.dir.index(action)
     
+    def get_tprob(self):
+        
+        # selected action -> reached state
+
+        a_a = np.ones([len(self.env.dir), len(self.env.dir)]) * 0.1
+
+        np.fill_diagonal(a_a, 0.7)
+
+        return np.tile(a_a.flatten(), [self.env.size[0], self.env.size[1]]).reshape([self.env.size[0], self.env.size[1], len(self.env.dir), len(self.env.dir)])
+
+    
     def random_walk(self, epoch, show = False):
 
         """
@@ -137,36 +203,18 @@ class agent:
             
             self.step = 0
 
-            print (self.state)
-                
-            #print self.isBreak
-            
-            #print i
-
             if self.state in self.env.terminate or self.state in self.env.unavailable:
-
                 continue
-            
             while not self.isBreak:
-                
                 print ('-------------------------------------------------------')
-                
                 print ('Epoch : {}, Step : {}, State : {}'.format(i+1, self.step, self.state))
-                self.show()
-
-
+                #self.show()
                 print ('Choosed : ', self.env.dir[self.policy[self.state[0], self.state[1]]])
-        
                 r = self.act(self.policy[self.state[0], self.state[1]])
-
                 self.step += 1
-                
-                if show:
-
-                    self.show()
-
+                #if show:
+                    #self.show()
             self.isBreak = False
-
         self.update_policy()
 
     def random_start(self):
@@ -182,11 +230,8 @@ class agent:
 
             coord = [np.random.choice(self.env.size[0]), \
                     np.random.choice(self.env.size[1])]
-                    
             if coord in self.env.unavailable or coord in self.env.terminate:
-
                 continue
-
             break
         print ('Start : ', coord)
         return coord # set start position
@@ -210,22 +255,7 @@ class agent:
         action : int -> action
         """
         
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# random select action
+        # random select action
         # action = self.available() 
 
         # h x w x a x s'
@@ -251,11 +281,11 @@ class agent:
         
         next_state = self.move(self.state, self.available()[1][self.transition(tprob_available)])
         
-        print ('Next State : ', self.env.grid[next_state[0], next_state[1]])
+        #print ('Next State : ', self.env.grid[next_state[0], next_state[1]])
 
         self.state = next_state if self.isReachable(next_state) else self.state
          
-        print ('Reachable : ', self.isReachable(next_state))
+        #print ('Reachable : ', self.isReachable(next_state))
 
         # update q value
 
@@ -275,15 +305,7 @@ class agent:
             maximum = -1e3
 
             for a in xrange(len(self.env.dir)):
-            #for avas, avadir in zip(self.available()[0], self.available()[1]):  
 
-                #maximum = 0     
-                
-                #print (self.env.dir[a])
-        #        if not self.isReachable(self.move(self.state, self.env.dir[a])):
-
-         #          continue
-        
                 """
 
                 pns : possible next state
@@ -293,29 +315,28 @@ class agent:
                 """
                 
                 sum_over_next_state = 0
-                print('PNS : {}'.format(self.available()[0]))
+                
                 for pns, pnd in zip(self.available()[0], self.available()[1]):
                     
-                    #if not self.isReachable(self.move(self.state, self.env.dir[a])):
-
-                     #   continue
                     if pns in self.env.unavailable:
-
                         continue
                     
                     sum_over_next_state += self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * \
                             (self.reward_function() + self.discount * self.value[pns[0], pns[1]])
                 # update value
-                    print ('T x (reward + r * vk[s] : {} x ({} + {} * {})) = {}'.format(self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)], self.reward_function(), self.discount, self.value[pns[0], pns[1]], self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * (self.reward_function() + self.discount * self.value[pns[0], pns[1]])))
+                    #print ('T x (reward + r * vk[s] : {} x ({} + {} * {})) = {}'.format(self.tprob[self.state[0], \
+                     #       self.state[1], a, self.action_index(pnd)], self.reward_function(), self.discount, \
+                      #      self.value[pns[0], pns[1]], self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * \
+                       #     (self.reward_function() + self.discount * self.value[pns[0], pns[1]])))
                 
                 
-                print ('Updating', self.q_value[self.state[0], self.state[1]])
+                #print ('Updating', self.q_value[self.state[0], self.state[1]])
 
                 self.q_value[self.state[0], self.state[1], a] = sum_over_next_state#maximum
             
-            self.value[self.state[0], self.state[1]] = self.value_function()
+            self.value[self.state[0], self.state[1]] = self.value_function(self.state)
 
-            print ('Update : ', self.q_value[self.state[0], self.state[1]])
+            #print ('Update : ', self.q_value[self.state[0], self.state[1]])
             
             self.show()
 
@@ -346,7 +367,7 @@ class agent:
         
         return -0.1
         #return self.discount ** self.step * self.value_function()
-
+    """
     def value_function(self, state = None, index = False):
         
         #maximum = 0
@@ -362,7 +383,7 @@ class agent:
         else:
             
             return np.max(self.q_value[state[0], state[1]])
-
+        """
     def q_function(self, state, action):
 
         return q_value[state[0], state[1], action]
@@ -407,7 +428,7 @@ class agent:
 
             for i in xrange(self.env.size[1]):
 
-                print ('update : ', self.q_value[j,i])
+                #print ('update : ', self.q_value[j,i])
 
                 _, self.policy[j, i] = self.value_function([j, i], index = True)
                 
@@ -423,7 +444,7 @@ class agent:
                 
                 if [h,w] in self.env.unavailable:
 
-                    print (' {} '.format(self.value[h,w]), end = '')
+                    print ('  X  '.format(self.value[h,w]), end = '')
                     print ('|', end = '')
                     continue
                 elif [h,w] in self.env.terminate:
