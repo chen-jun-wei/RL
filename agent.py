@@ -74,32 +74,33 @@ class agent:
 
         maximum_index = None
         
+        #print('State : {}'.format(state))
         # Check if next state is available
 
         for idx in xrange(len(self.env.dir)):
 
             nexts = self.move(state, self.env.dir[idx])
-            print (nexts)    
+            #print ('Next : {}'.format(nexts))    
             
             
             if nexts in self.env.unavailable:
 
                 continue
 
-            if (nexts[0] >= 0 and nexts < self.env.size[0]) and \
+            if (nexts[0] >= 0 and nexts[0] < self.env.size[0]) and \
                     (nexts[1] >= 0 and nexts[1] < self.env.size[1]):
                 
                 if maximum == None:
-                    maximum = self.q_value[state[0], state[1], self.env.dir[idx]]
+                    maximum = self.q_value[state[0], state[1], idx]
                     maximum_index = idx
                 else:
-                    maximum_index = maximum_index if self.q_value[state[0], state[1], self.env.dir[idx]] > maximum else idx 
+                    maximum_index = maximum_index if self.q_value[state[0], state[1], idx] > maximum else idx 
                     
-                    maximum = max(maximum, self.q_value[state[0], state[1], self.env.dir[idx]])
+                    maximum = max(maximum, self.q_value[state[0], state[1], idx])
                  
-                if np.isnan(maximum):
+                #if np.isnan(maximum):
 
-                    raise
+                 #   raise
 
         if index:
         
@@ -315,19 +316,16 @@ class agent:
                 """
                 
                 sum_over_next_state = 0
-                
-                for pns, pnd in zip(self.available()[0], self.available()[1]):
-                    
+
+                for pns, pnd in zip(self.available()[0], self.available()[1]):    
                     if pns in self.env.unavailable:
                         continue
-                    
-                    sum_over_next_state += self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * \
-                            (self.reward_function() + self.discount * self.value[pns[0], pns[1]])
+                    #print ('{}, {} : {}'.format(a, pnd, self.value_function(pns)))
+                    sum_over_next_state += self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * (self.reward_function() + self.discount * self.value_function(pns))
                 # update value
-                    #print ('T x (reward + r * vk[s] : {} x ({} + {} * {})) = {}'.format(self.tprob[self.state[0], \
-                     #       self.state[1], a, self.action_index(pnd)], self.reward_function(), self.discount, \
-                      #      self.value[pns[0], pns[1]], self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * \
-                       #     (self.reward_function() + self.discount * self.value[pns[0], pns[1]])))
+                    #print ('T x (reward + r * vk[s] : {} x ({} + {} * {})) = {}'.format(self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)], self.reward_function(), self.discount, \
+                     #       self.value_function(pns), self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * \
+                            #(self.reward_function() + self.discount * self.value_function(pns))
                 
                 
                 #print ('Updating', self.q_value[self.state[0], self.state[1]])
@@ -365,7 +363,7 @@ class agent:
 
     def reward_function(self):
         
-        return -0.1
+        return -0.5
         #return self.discount ** self.step * self.value_function()
     """
     def value_function(self, state = None, index = False):
@@ -396,7 +394,7 @@ class agent:
 
             for w in xrange(self.env.size[1]):
 
-                print('%3.3f' % (self.value[h,w] ), end = '')
+                print('%3.3f' % (self.value_function([h,w])), end = '')
                 
                 print2(' | ')
             
@@ -444,12 +442,12 @@ class agent:
                 
                 if [h,w] in self.env.unavailable:
 
-                    print ('  X  '.format(self.value[h,w]), end = '')
+                    print ('  X  ', end = '')
                     print ('|', end = '')
                     continue
                 elif [h,w] in self.env.terminate:
 
-                    print (' {} '.format(self.value[h,w]), end = '')
+                    print (' {} '.format(self.value_function([h,w])), end = '')
                     print ('|', end = '')
                     continue
                # print ('{}'.format(p))
