@@ -74,14 +74,11 @@ class agent:
 
         maximum_index = None
         
-        #print('State : {}'.format(state))
         # Check if next state is available
 
         for idx in xrange(len(self.env.dir)):
 
             nexts = self.move(state, self.env.dir[idx])
-            #print ('Next : {}'.format(nexts))    
-            
             
             if nexts in self.env.unavailable:
 
@@ -181,14 +178,14 @@ class agent:
         
         # selected action -> reached state
         
-        
         a_a = np.ones([len(self.env.dir), len(self.env.dir)]) * tprob
 
         np.fill_diagonal(a_a, 1 - tprob * (len(self.env.dir) - 1))
 
         return np.tile(a_a.flatten(), [self.env.size[0], self.env.size[1]]).reshape([self.env.size[0], self.env.size[1], len(self.env.dir), len(self.env.dir)])
-
     
+
+
     def random_walk(self, epoch, show = False):
 
         """
@@ -208,7 +205,6 @@ class agent:
             print ('--         Epoch {}         --'.format(i+1))
             print ('-----------------------------\n\n')
             self.state = self.random_start()
-            
             self.step = 0
 
             if self.state in self.env.terminate or self.state in self.env.unavailable:
@@ -216,14 +212,16 @@ class agent:
             while not self.isBreak:
                 print ('------------------------------')
                 print ('Epoch : {}, Step : {}, State : {}'.format(i+1, self.step, self.state))
-                #self.show()
-                #print ('Choosed : ', self.env.dir[self.policy[self.state[0], self.state[1]]])
-                r = self.act(self.policy[self.state[0], self.state[1]])
+                
+                """
+                act in term of policy, which is randomized by default
+            
+                """
+                self.act(self.policy[self.state[0], self.state[1]])
                 self.step += 1
-                #if show:
-                    #self.show()
-                    
             self.isBreak = False
+
+        self.show()
         self.update_policy()
 
     def random_start(self):
@@ -247,6 +245,13 @@ class agent:
 
     def isReachable(self, next_state):
         
+        """
+
+        if agent make a transition to the state that is not alow to go, let agent stay at same state
+
+        for example, agent cant get to the state which is a wall, or cross the grid border
+
+        """
         try:
             self.env.grid[next_state[0], next_state[1]]
         except:
@@ -259,17 +264,11 @@ class agent:
 
         take the action and reach next state,
         but the transition is stochastic,
-        which might not go the state one expected
+        which might not reach the state one expected
         
-        action : int -> action
-        """
-        
-        # random select action
-        # action = self.available() 
+        action : map "int" -> "action"
 
-        # h x w x a x s'
-    
-        # stochastic transition probability
+        """
         
         tprob_available = []
 
@@ -286,36 +285,27 @@ class agent:
         
         # reach next state sucessful
     
-        #print 'available : ', self.available()[1]
-        
         next_state = self.move(self.state, self.available()[1][self.transition(tprob_available)])
         
-        #print ('Next State : ', self.env.grid[next_state[0], next_state[1]])
-
         self.state = next_state if self.isReachable(next_state) else self.state
          
-        #print ('Reachable : ', self.isReachable(next_state))
-
-        # update q value
-
-        # pns : probable next state
-        
         if self.state in self.env.terminate:
 
-            # reset reward
-
-            self.reward = 0
-                
             self.isBreak = True
-
-        #elif self.isReachable(next_state) :      
+            #self.reward = 0
         else:
 
-            maximum = -1e3
+            """
+
+            iterate over all direction(action)
+
+            """
 
             for a in xrange(len(self.env.dir)):
 
                 """
+                
+                reached state might not same as choosed action
 
                 pns : possible next state
             
@@ -326,25 +316,22 @@ class agent:
                 sum_over_next_state = 0
 
                 for pns, pnd in zip(self.available()[0], self.available()[1]):    
+                    
                     if pns in self.env.unavailable:
-                        continue
-                    #print ('{}, {} : {}'.format(a, pnd, self.value_function(pns)))
-                    sum_over_next_state += self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * (self.reward + self.discount * self.value_function(pns))
-                # update value
-                    #print ('T x (reward + r * vk[s] : {} x ({} + {} * {})) = {}'.format(self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)], self.reward_function(), self.discount, \
-                     #       self.value_function(pns), self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * \
-                            #(self.reward_function() + self.discount * self.value_function(pns))
-                
-                
-                #print ('Updating', self.q_value[self.state[0], self.state[1]])
+    
+                        """
 
+                        if the possible next state is a wall, do not compute the value
+
+                        """
+                        continue
+
+                    sum_over_next_state += self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * \
+                            (self.reward + self.discount * self.value_function(pns))
+                
                 self.q_value[self.state[0], self.state[1], a] = sum_over_next_state#maximum
             
             self.value[self.state[0], self.state[1]] = self.value_function(self.state)
-
-            #print ('Update : ', self.q_value[self.state[0], self.state[1]])
-            
-            #self.show()
 
     # transition probability range, random probability
 
@@ -368,36 +355,13 @@ class agent:
             if tprob_range[i] < rprob and rprob < tprob_range[i+1]:
                 
                 return i # return which action to run
-    """
-    def reward_function(self):
-        
-        return -0.1
-        #return self.discount ** self.step * self.value_function()
-    """
-    """
-    def value_function(self, state = None, index = False):
-        
-        #maximum = 0
-        
-        if state == None:
-
-            state = self.state
-
-        if index:
-        
-            return np.max(self.q_value[state[0], state[1]]), np.argmax(self.q_value[state[0], state[1]])
-        
-        else:
-            
-            return np.max(self.q_value[state[0], state[1]])
-    """
+    
     def q_function(self, state, action):
 
         return q_value[state[0], state[1], action]
 
     def show(self):
-        
-        
+            
         print ('\nGrid \n')
 
         for h in reversed(xrange(self.env.size[0])):
@@ -423,8 +387,6 @@ class agent:
 
             for w in xrange(self.env.size[1]):
 
-                #print2(self.value_function([h,w]))
-                
                 if [h,w] == self.state:
 
                     print(' o ', end = '')
@@ -447,7 +409,6 @@ class agent:
 
                 _, self.policy[j, i] = self.value_function([j, i], index = True)
                 
-    
     def show_policy(self):
         
         print ('\n Policy \n ')
