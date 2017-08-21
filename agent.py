@@ -2,18 +2,18 @@ from __future__ import print_function
 import numpy as np
 from utils import softmax, cdf
 import copy
-
+import time
 class agent:
 
-    def __init__(self, env, start, epoch, discount, tprob):
+    def __init__(self, env, start, discount, reward = -0.1, tprob = 0.1):
 
         self.state = start
         self.discount = discount         
         self.env = env
-        self.epoch = epoch
         self.step = 0
         self.isBreak = False
         self.start_point = start
+        self.reward = reward
         """
         Transition Probability
         
@@ -25,14 +25,14 @@ class agent:
 
        # self.tprob = np.ones([env.size[0], env.size[1], len(env.dir), len(env.dir)]) / len(env.dir)
 
-        assert len(tprob) == len(env.dir)
+        #assert len(tprob) == len(env.dir)
        
        # fixed transition probability , E -> 0.7, W -> 0.1, S -> 0.1, N -> 0.1
        # self.tprob = np.tile(tprob, env.size[0] * env.size[1] * len(env.dir)).reshape([env.size[0], env.size[1], len(env.dir), len(env.dir)])
         
         # 0.7 for selected action, 0.1 for other 3 action
 
-        self.tprob = self.get_tprob()
+        self.tprob = self.get_tprob(tprob)
 
         # randomize the policy
 
@@ -43,9 +43,9 @@ class agent:
         self.value = np.zeros([env.size[0], env.size[1]])
 
         if not int(np.prod(np.array(env.size) > np.array(start))):        
-        
+            #continue
             print ('[!] Start Position is not in Environment')
-
+            raise
 
         self.initialize()
     
@@ -177,13 +177,14 @@ class agent:
 
         return self.env.dir.index(action)
     
-    def get_tprob(self):
+    def get_tprob(self, tprob):
         
         # selected action -> reached state
+        
+        
+        a_a = np.ones([len(self.env.dir), len(self.env.dir)]) * tprob
 
-        a_a = np.ones([len(self.env.dir), len(self.env.dir)]) * 0.1
-
-        np.fill_diagonal(a_a, 0.7)
+        np.fill_diagonal(a_a, 1 - tprob * (len(self.env.dir) - 1))
 
         return np.tile(a_a.flatten(), [self.env.size[0], self.env.size[1]]).reshape([self.env.size[0], self.env.size[1], len(self.env.dir), len(self.env.dir)])
 
@@ -196,10 +197,16 @@ class agent:
 
         """
 
-        
-        
-        for i in xrange(epoch):
+        self.show()
 
+        print("\n\nBefore Value Iteration ... ")
+        
+        time.sleep(5)
+
+        for i in xrange(epoch):
+            print ('\n\n-----------------------------')
+            print ('--         Epoch {}         --'.format(i+1))
+            print ('-----------------------------\n\n')
             self.state = self.random_start()
             
             self.step = 0
@@ -207,14 +214,15 @@ class agent:
             if self.state in self.env.terminate or self.state in self.env.unavailable:
                 continue
             while not self.isBreak:
-                print ('-------------------------------------------------------')
+                print ('------------------------------')
                 print ('Epoch : {}, Step : {}, State : {}'.format(i+1, self.step, self.state))
                 #self.show()
-                print ('Choosed : ', self.env.dir[self.policy[self.state[0], self.state[1]]])
+                #print ('Choosed : ', self.env.dir[self.policy[self.state[0], self.state[1]]])
                 r = self.act(self.policy[self.state[0], self.state[1]])
                 self.step += 1
                 #if show:
                     #self.show()
+                    
             self.isBreak = False
         self.update_policy()
 
@@ -234,7 +242,7 @@ class agent:
             if coord in self.env.unavailable or coord in self.env.terminate:
                 continue
             break
-        print ('Start : ', coord)
+        print ('Start Point: ', coord)
         return coord # set start position
 
     def isReachable(self, next_state):
@@ -321,7 +329,7 @@ class agent:
                     if pns in self.env.unavailable:
                         continue
                     #print ('{}, {} : {}'.format(a, pnd, self.value_function(pns)))
-                    sum_over_next_state += self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * (self.reward_function() + self.discount * self.value_function(pns))
+                    sum_over_next_state += self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * (self.reward + self.discount * self.value_function(pns))
                 # update value
                     #print ('T x (reward + r * vk[s] : {} x ({} + {} * {})) = {}'.format(self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)], self.reward_function(), self.discount, \
                      #       self.value_function(pns), self.tprob[self.state[0], self.state[1], a, self.action_index(pnd)] * \
@@ -336,7 +344,7 @@ class agent:
 
             #print ('Update : ', self.q_value[self.state[0], self.state[1]])
             
-            self.show()
+            #self.show()
 
     # transition probability range, random probability
 
@@ -360,11 +368,12 @@ class agent:
             if tprob_range[i] < rprob and rprob < tprob_range[i+1]:
                 
                 return i # return which action to run
-
+    """
     def reward_function(self):
         
-        return -0.5
+        return -0.1
         #return self.discount ** self.step * self.value_function()
+    """
     """
     def value_function(self, state = None, index = False):
         
@@ -381,27 +390,35 @@ class agent:
         else:
             
             return np.max(self.q_value[state[0], state[1]])
-        """
+    """
     def q_function(self, state, action):
 
         return q_value[state[0], state[1], action]
 
     def show(self):
         
-        from utils import print2
+        
+        print ('\nGrid \n')
 
         for h in reversed(xrange(self.env.size[0])):
 
             for w in xrange(self.env.size[1]):
 
-                print('%3.3f' % (self.value_function([h,w])), end = '')
+                if [h,w] in self.env.unavailable:
+
+                    print('  X  ', end = '')
+
+                else:
+
+                    print('%3.3f' % (self.value_function([h,w])), end = '')
                 
-                print2(' | ')
+                print(' | ', end = '')
             
             print (' ')
 
-
-
+        print ('\n')
+        print ('Current State')
+        print ('\n')
         for h in reversed(xrange(self.env.size[0])):
 
             for w in xrange(self.env.size[1]):
@@ -410,29 +427,30 @@ class agent:
                 
                 if [h,w] == self.state:
 
-                    print2(' o ')
+                    print(' o ', end = '')
 
                 else:
                     
-                    print2('   ')
+                    print('   ', end = '')
 
-                print2(' | ')
+                print(' | ', end = '')
             
             print (' ')
 
     def update_policy(self):
+        
+        print ("\n Updating Policy ...")
 
         for j in xrange(self.env.size[0]):
 
             for i in xrange(self.env.size[1]):
 
-                #print ('update : ', self.q_value[j,i])
-
                 _, self.policy[j, i] = self.value_function([j, i], index = True)
                 
     
     def show_policy(self):
-
+        
+        print ('\n Policy \n ')
         for h in reversed(xrange(self.env.size[0])):
 
             for w in xrange(self.env.size[1]):
