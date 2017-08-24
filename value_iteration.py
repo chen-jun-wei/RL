@@ -20,41 +20,49 @@ class value_iteration_agent(agent):
 
     def value_iteration(self, epoch):
 
-        for i in xrange(epoch):
+        for e in xrange(epoch):
+            
+            for j in (xrange(self.env.size[0])):
 
-            self.state = self.random_start()
+                for i in (xrange(self.env.size[1])):
+                    
+                    if [j,i] in self.env.terminate or [j,i] in self.env.unavailable:
 
-            self.step = 0
+                        continue
+            
+                    self.state = [j,i]
+                    
+                    maximum = None
+                    
+                    for a_index in xrange(len(self.env.dir)):    
 
-            if self.state in self.env.terminate or self.state in self.env.unavailable:
+                        q = self.reward
+                        print '-------------'
+                        print 'Take {}'.format(self.env.dir[a_index])
+                        print self.show()
 
-                continue
+                        for pns, pnd in zip(self.available()[0], self.available()[1]):    
+                            if pns in self.env.unavailable:
 
-            while not self.isBreak:
-                
-                for j in self.env.size[0]:
+                                continue
+                                
+                            q += self.discount * \
+                                    self.tprob[j, i, a_index, self.action_index(pnd)] * \
+                                    self.value_function(pns) 
+                        
+                        self.q_value[j, i, a_index] = q
+                        
+                        maximum = q if maximum == None else max(maximum, q)
+                        
 
-                    for i in self.env.size[1]:
+                    self.value_k1[j,i] = maximum
+                    #if i == 2:
 
-                        for a in self.env.dir:
-                            
-                            maximum = None
+                     #   print self.q_value[j,i]
 
-                            sum_over_next_state = 0
-
-                            for pns, pnd in zip(xrange(len(self.env.dir)):
-
-                                sum_over_next_state += self.discount * self.tprob[j, i, a, pns_index] * self.value_function([j,i]) 
-                                    
-                                else:
-
-
-
-                #self.act(self.policy[self.state[0], self.state[1])
-
-                self.step += 1
-
-
+                      #  raise
+            self.value = self.value_k1
+        self.update_policy()            
 
 
 """
@@ -64,12 +72,19 @@ tprob = 0.1 agent got a probability of 0.1 tranistion to non selected state
 tprob = 1 - 0.1 * 3  = 0.7, agent got a probability of 0.7 transition to selected state (0.1 for other three action)
 
 """
-a = agent(g, [0,0], discount = 0.9, reward = 0, tprob = 0.1)
+a = value_iteration_agent(g, [0,0], discount = 0.9, reward = -0.1, tprob = 0.1)
 
-a.value_iteration(epoch = 50, show = True)
+print a.q_value[1,1]
+a.value_iteration(epoch = 40)
 
 a.show_policy()
+a.show()
+print a.q_value[1,1]
 
+print a.q_value[0,1]
+print a.value_function([0,1], True)
 
+print a.value_function([1,0])
+print a.value_function([1,0], index = True)
 
-
+print a.q_value[1,0]

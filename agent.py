@@ -40,8 +40,11 @@ class agent:
         
         self.q_value = np.zeros([env.size[0], env.size[1], len(env.dir)])
         
+        self.q_value_k1 = np.zeros([env.size[0], env.size[1], len(env.dir)])
         self.value = np.zeros([env.size[0], env.size[1]])
 
+        self.value_k1 = np.zeros([env.size[0], env.size[1]])
+        
         if not int(np.prod(np.array(env.size) > np.array(start))):        
             #continue
             print ('[!] Start Position is not in Environment')
@@ -84,6 +87,10 @@ class agent:
 
                 continue
 
+            elif not self.isReachable(nexts):
+
+                continue
+
             if (nexts[0] >= 0 and nexts[0] < self.env.size[0]) and \
                     (nexts[1] >= 0 and nexts[1] < self.env.size[1]):
                 
@@ -91,7 +98,7 @@ class agent:
                     maximum = self.q_value[state[0], state[1], idx]
                     maximum_index = idx
                 else:
-                    maximum_index = maximum_index if self.q_value[state[0], state[1], idx] > maximum else idx 
+                    maximum_index = maximum_index if self.q_value[state[0], state[1], idx] < maximum else idx 
                     
                     maximum = max(maximum, self.q_value[state[0], state[1], idx])
                  
@@ -101,7 +108,7 @@ class agent:
 
         if index:
         
-            return maximum,  np.argmax(self.q_value[state[0], state[1]])
+            return maximum, maximum_index
         
         else:
             
@@ -359,6 +366,8 @@ class agent:
     def q_function(self, state, action):
 
         return q_value[state[0], state[1], action]
+    
+    def policy_evaluation(self):
 
     def show(self):
             

@@ -14,7 +14,7 @@ class policy_iteration_agent(agent):
 
         for i in xrange(epoch):
             
-            self.state = [0,0]#self.random_start()
+            self.state = self.random_start()
 
             self.step = 0
 
